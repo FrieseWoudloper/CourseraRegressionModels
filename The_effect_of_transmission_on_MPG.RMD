@@ -1,0 +1,108 @@
+---
+title: "The effect of transmission on MPG"
+author: "Willy Bakker"
+output: html_document
+---
+```{r, messages = FALSE, warning = FALSE, results = 'hide', echo = FALSE}
+fit <- lm(mpg ~ factor(am), data = mtcars)
+coef <- summary(fit)$coef
+```
+Source: http://github.com/friesewoudloper/daffdfads
+
+### Executive Summary
+The editors of Motor Trend, a magazine about the automobile industry, are interested in exploring the relationship between a set of variables and miles per gallon (MPG). They are particularly interested in the following two questions:
+
+* Is an automatic or manual transmission better for MPG?
+* What is the MPG difference between automatic and manual transmissions?
+
+Motor Trend has a data set of a collection of cars comprising MPG and 10 aspects of automobile design and performance for 32 automobiles (1973-74 models).
+Simple linear analysis showed an effect of transmission type on MPG. The presence of a manual transmisson led to an expected increase of `r round(coef[2,1], 1)` miles per gallon. However, when we adjusted the effect of transmission for weight, number of cylinders and horse power, the effect proved to be non-significant. 
+
+### The data set
+The data set has 32 observations on 11 variables. Miles/gallon (mpg), displacement (disp), gross horsepower (hp), weight (wt), rear axle ratio (drat) and 1/4 mile time (qsec) are quantitative variables. Number of cylinders (cyl), number of forward gears (gears) and number of carburetors (carb) are ordinal variables. Type of engine (vs) and transmission (am) are nominal variables. Ordinal and nominal variables are treated als factor variables in the data analysis.
+```{r, echo = FALSE}
+library(knitr)
+library(ellipse)
+library(ggplot2)
+library(gridExtra)
+
+data(mtcars)
+```
+
+### Exploratory data analysis
+The boxplot in appendix 1 reveals that the mean MPG of automatic transmission cars in the data frame is lower than that of manual transmission cars.
+The correlation matrix in appendix 2 gives an idea of the degree and type of relationships between the variables in the data set. Note that the matrix consists of Pearson's correlation coefficients, which may not be the best choice for ordinal and nominal variables. Weight, number of cylinders, displacement and gross horse power are highly correlated with MPG. The absolute correlation coefficient is (almost) 0.80 or higher. 
+The plots in appendix 3 visualize the relationships between the outcome variable MPG and the highest correlated predictor variables, differentiated by transmission. It appears that for displacement and weight there may be an interaction with transmission.
+
+### The unadjusted effect of transmission on MPG
+```{r, messages = FALSE, warning = FALSE, results = 'hide', echo = FALSE}
+fit <- lm(mpg ~ factor(am), data = mtcars)
+coef <- summary(fit)$coef
+```
+The effect of transmission on MPG is estimated using a simple linear regression model: $Y_i = \beta_0 + \beta_1 X_i + \epsilon_i$ where $\epsilon_i$ are iid $N(0, \sigma^2)$ with transmission as the predictor and MPG as the outcome. No other covariates are included in the model. 
+According to this simple linear regression model, there is an increase of `r round(coef[2,1], 1)` miles per gallon if the car has a manual transmission. 
+MPG differs significantly between automatic and manual transmission (p-value = `r sprintf("%.4f", coef[2,4])`). However, these are unadjusted estimates. They may be biased! The effect of transmission on MPG explains about `r round(100 * summary(fit)$adj.r.squared, 0)` % of the variation in MPG (adjusted R-squared). So, the greater part of the variation in MPG remains unexplained. 
+
+### The adjusted effect of transmission on MPG
+The adjusted effect of transmission on MPG is also estimated using a multivariable regression model: $$ Y_i = \beta_1 X_{1i} + \beta_2 X_{2i} + \ldots + \beta_{p} X_{pi} + \epsilon_{i} = \sum_{k=1}^p X_{ik} \beta_j + \epsilon_{i} $$ where $\epsilon_i$ are iid $N(0, \sigma^2)$ with transmission as $X_{1i}$ and MPG as $Y_i$.  
+The model is constructed by adding the four predictors with the highest correlation coefficient step-by-step to the simple linear model. These are weight, displacement, number of cylinders and horse power. Analysis of variance (ANOVA) is used to determine which predictors are kept in the model. Transmission is kept in every step, even if the coefficient is not significantly different from zero, because of the main research questions. Not only are the main effects added to the model and tested for, but also the interaction between transmission and weight, because the scatter plot in appendix 3 showed there might be a significant interaction effect between MPG and weight.  
+```{r, messages = FALSE, warning = FALSE, results = 'hide', echo = FALSE}
+fit <- lm(mpg ~ factor(am) + wt + factor(cyl) + hp, data = mtcars)
+coef <- summary(fit)$coef
+```
+See appendix 4 for the results of the ANOVA.
+Displacement seems to be a confounder for weight (also see the scatter plot in appendix 3). Adding displacement, does not significantly improve the model fit. Likewise for adding the interaction of transmission and weight. In the resulting model the outcome MPG is best predicted by the main effects of transmission, weight, number of cylinders and horse power. About `r round(100 * summary(fit)$adj.r.squared, 0)` % of the variation in MPG is explained by this multivariable model.
+According to the multivariable model there is an expected increase of `r round(coef[2,1], 1)` miles per gallon if the car has a manual transmission, assuming all other predictors (weight, number of cylinders and horse power) are kept constant. However, this adjusted effect of transmission on MPG is not significant (p-value = `r sprintf("%.4f", coef[2,4])`).
+
+### Testing the assumption of normality
+ANOVA is sensitive to its assumption that model residuals are approximately normal. If they are not, we could get small p-values for that reason. The Shapiro-Wilk test is used to test for normality. Normality is its null hypothesis. The Shapiro-Wilk p-value of `r sprintf("%.4f", shapiro.test(fit$residuals)$p.value)` fails to reject normality, supporting confidence in our analysis of variance. 
+
+### Residual plot
+Residuals should be uncorrelated with the fit, and should be independent and (almost) identically distributed with mean zero. 
+The residual plot in appendix 5 shows these assumptions hold. The mean of the residuals (blue dashed line) is very close to zero. The residuals seem uncorrelated to the fit and independent and identically distributed.
+
+### Appendix 1: MPG by transmission
+```{r, fig.width = 3, fig.height = 3, echo = FALSE}
+Transmission <- as.factor(mtcars$am)
+levels(Transmission) <- c("Automatic", "Manual")
+ggplot(aes(y = mpg, x = as.factor(Transmission)), data = mtcars) + geom_boxplot()+ ylab("Miles per gallon")  + xlab("Transmission") +  geom_hline(aes(yintercept = mean(mtcars$mpg[mtcars$am == 0])), colour = "blue", linetype = "dashed", size = 1) +  
+geom_hline(aes(yintercept = mean(mtcars$mpg[mtcars$am == 1])), colour = "red", linetype = "dashed", size = 1)
+```
+
+### Appendix 2: Correlation matrix
+```{r, echo = FALSE}
+kable(signif(cor(mtcars, method = "pearson"), 2))
+```
+
+### Appendix 3: Scatter plots
+```{r, echo = FALSE}
+mtcars$Transmission <- as.factor(mtcars$am)
+levels(mtcars$Transmission) <- c("Automatic", "Manual")
+hp <- ggplot(mtcars, aes(x = hp, y = mpg, colour = Transmission)) + geom_point() + stat_smooth(method = "lm", formula = y ~ x, se = FALSE) + ylab("Miles per gallon") + xlab("Gross horsepower") 
+disp <- ggplot(mtcars, aes(x = disp, y = mpg, colour = Transmission)) + geom_point() + stat_smooth(method = "lm", formula = y ~ x, se = FALSE)+ ylab("Miles per gallon") + xlab("Displacement (cu.in.)")
+wt <- ggplot(mtcars, aes(x = wt, y = mpg, colour = Transmission)) + geom_point() + stat_smooth(method = "lm", formula = y ~ x, se = FALSE)+ ylab("Miles per gallon")  + xlab("Weight (1000 lbs)")
+cyl <- ggplot(aes(y = mpg, x = as.factor(mtcars$cyl), fill = Transmission), data = mtcars) + geom_boxplot()+ ylab("Miles per gallon")  + xlab("Number of cylinders")
+grid.arrange(hp, disp, wt, cyl, ncol = 2)
+```
+
+### Appendix 4: ANOVA
+```{r}
+fit1 <- lm(mpg ~ factor(am), data = mtcars)
+fit2 <- lm(mpg ~ factor(am) + wt, data = mtcars)
+anova(fit1, fit2)
+fit3 <- lm(mpg ~ factor(am) + wt + disp, data = mtcars)
+anova(fit2, fit3)
+fit4 <- lm(mpg ~ factor(am) + wt + factor(cyl), data = mtcars)
+anova(fit2, fit4)
+fit5 <- lm(mpg ~ factor(am) + wt + factor(cyl) + hp, data = mtcars)
+anova(fit4, fit5)
+fit6 <- lm(mpg ~ factor(am) + wt*factor(am)+ factor(cyl) + hp, data = mtcars)
+anova(fit5, fit6)
+```
+
+### Appendix 5: Residuals versus fitted 
+```{r, fig.width = 3, fig.height = 3, echo = FALSE}
+fit <- lm(mpg ~ factor(am) + wt + factor(cyl) + hp, data = mtcars)
+ggplot(mtcars, aes(x = fit$fitted, y = fit$resid)) + geom_point(shape = 19) + ylab("Residuals") + xlab("Fitted") + geom_hline(aes(yintercept = mean(fit$resid)), colour = "blue", linetype = "dashed", size = 1) 
+```
+
