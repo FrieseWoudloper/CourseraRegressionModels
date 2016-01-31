@@ -7,7 +7,7 @@ output: html_document
 fit <- lm(mpg ~ factor(am), data = mtcars)
 coef <- summary(fit)$coef
 ```
-Source: http://github.com/friesewoudloper/daffdfads
+[Source on GitHub](http://github.com/FrieseWoudloper/Coursera_Regression_Models/blob/master/The_effect_of_transmission_on_MPG.RMD)
 
 ### Executive Summary
 The editors of Motor Trend, a magazine about the automobile industry, are interested in exploring the relationship between a set of variables and miles per gallon (MPG). They are particularly interested in the following two questions:
